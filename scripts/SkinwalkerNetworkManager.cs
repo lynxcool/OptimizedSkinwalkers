@@ -50,7 +50,7 @@
 
         protected override void __initializeVariables()
         {
-            SkinwalkerLogger.Log("__initializeVariables");
+            SkinwalkerLogger.Log("called __initializeVariables");
 
             if (VoiceLineFrequency == null)
             {

@@ -61,28 +61,21 @@
 
         private void SetNextTime()
         {
-            if (SkinwalkerNetworkManager.Instance.VoiceLineFrequency.Value <= 0f)
-            {
-                nextTimeToPlayAudio = Time.time + 100000000f;
-            }
-            else
-            {
-                nextTimeToPlayAudio = Time.time + UnityEngine.Random.Range(PLAY_INTERVAL_MIN, PLAY_INTERVAL_MAX) / SkinwalkerNetworkManager.Instance.VoiceLineFrequency.Value;
-            }
+            float random = UnityEngine.Random.Range(PLAY_INTERVAL_MIN, PLAY_INTERVAL_MAX);
+            nextTimeToPlayAudio = Time.time + random / SkinwalkerNetworkManager.Instance.VoiceLineFrequency.Value;
         }
 
         //TODO :: Needed?
         private T CopyComponent<T>(T original, GameObject destination) where T : Component
         {
             Type type = original.GetType();
-            Component val = destination.AddComponent(type);
+            Component addedComponent = destination.AddComponent(type);
             FieldInfo[] fields = type.GetFields();
-            FieldInfo[] array = fields;
-            foreach (FieldInfo fieldInfo in array)
+            foreach (FieldInfo fieldInfo in fields)
             {
-                fieldInfo.SetValue(val, fieldInfo.GetValue(original));
+                fieldInfo.SetValue(addedComponent, fieldInfo.GetValue(original));
             }
-            return (T)(object)((val is T) ? val : null);
+            return addedComponent is T converted ? converted : null;
         }
     }
 }

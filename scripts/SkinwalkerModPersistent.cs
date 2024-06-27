@@ -1,6 +1,5 @@
 ﻿namespace OptimizedSkinwalkers
 {
-    using Dissonance;
     using Dissonance.Config;
     using System.Collections;
     using System.Collections.Generic;
@@ -12,17 +11,23 @@
     public class SkinwalkerModPersistent : MonoBehaviour
     {
         private const int MAX_CACHED_AUDIO = 200;
-        private const float FOLDER_SCAN_INTERVAL = 8f;
 
-        private List<AudioClip> cachedAudio = new List<AudioClip>();
+        private List<AudioClip> cachedRecordedAudio = new();
+        private List<AudioClip> cachedPersistentAudio = new();
         private RoundManager roundManager;
 
-        private bool cleaningAudioCache;
-        private string audioFolderPath;
+        private bool isCleaningAudioCache;
+
+        private string recordedAudioFolderPath;
+        private string persistentAudioFolderPath;
         private int skinwalkerCheckedCount;
+        private float folderScanRate;
         private float nextTimeToCheckFolder;
 
         public static SkinwalkerModPersistent Instance { get; private set; }
+
+        private bool IsVoiceRecordingEnabled => !(SkinwalkerConfig.AddCustomFiles.Value && SkinwalkerConfig.CustomSoundFrequency.Value >= SkinwalkerConfig.CUSTOM_SOUND_FREQUENCY_MAX);
+        private bool AreCustomSoundsEnabled => SkinwalkerConfig.AddCustomFiles.Value && SkinwalkerConfig.CustomSoundFrequency.Value > SkinwalkerConfig.CUSTOM_SOUND_FREQUENCY_MIN;
 
         private void Awake()
         {
@@ -35,25 +40,44 @@
                 Destroy(this);
             }
 
-            SkinwalkerLogger.Log("Skinwalker Mod Object Initialized");
+            SkinwalkerLogger.Log("SkinwalkerModPersistent Initialized");
+            SkinwalkerLogger.Log($"IsVoiceRecordingEnabled {IsVoiceRecordingEnabled}");
+            SkinwalkerLogger.Log($"AreCustomSoundsEnabled {AreCustomSoundsEnabled}");
 
             transform.position = Vector3.zero; //TODO :: Probably useless, but who knows
 
-            audioFolderPath = Path.Combine(Application.dataPath, "..", "Dissonance_Diagnostics");
-            InitializeAudioFolder();
-            EnableRecording();
+            recordedAudioFolderPath = Path.Combine(Application.dataPath, "..", "Dissonance_Diagnostics");
+            persistentAudioFolderPath = Path.Combine(Application.dataPath, "..", "Custom_Sounds");
+            InitializeAudioFolders();
+
+            folderScanRate = Mathf.Max(SkinwalkerConfig.DEFAULT_FOLDER_SCAN_INTERVAL, SkinwalkerConfig.TimeForFileCaching.Value);
+
+            if (IsVoiceRecordingEnabled)
+            {
+                EnableRecording();
+            }
+        }
+
+        private IEnumerator Start()
+        {
+            if (AreCustomSoundsEnabled)
+            {
+                string[] audioFilePaths = Directory.GetFiles(persistentAudioFolderPath);
+                yield return StartCoroutine(CacheWavFile(audioFilePaths, cachedPersistentAudio, false));
+            }
         }
 
         private void Update()
         {
-            if (!Directory.Exists(audioFolderPath))
+            if ((IsVoiceRecordingEnabled && !Directory.Exists(recordedAudioFolderPath)) ||
+                AreCustomSoundsEnabled && !Directory.Exists(persistentAudioFolderPath))
             {
                 return;
             }
 
             if (Time.realtimeSinceStartup > nextTimeToCheckFolder)
             {
-                nextTimeToCheckFolder = Time.realtimeSinceStartup + FOLDER_SCAN_INTERVAL;
+                nextTimeToCheckFolder = Time.realtimeSinceStartup + folderScanRate;
                 ScanWavFiles();
             }
 
@@ -65,9 +89,9 @@
         {
             DisableRecording();
 
-            if (Directory.Exists(audioFolderPath))
+            if (!SkinwalkerConfig.KeepFilesBetweenSessions.Value && Directory.Exists(recordedAudioFolderPath))
             {
-                Directory.Delete(audioFolderPath, recursive: true);
+                Directory.Delete(recordedAudioFolderPath, recursive: true);
             }
         }
 
@@ -107,14 +131,28 @@
             skinwalkerCheckedCount = enemiesCount;
         }
 
-        private void InitializeAudioFolder()
+        private void InitializeAudioFolders()
         {
-            if (Directory.Exists(audioFolderPath))
+            if (IsVoiceRecordingEnabled)
             {
-                Directory.Delete(audioFolderPath, recursive: true);
+                if (!Directory.Exists(recordedAudioFolderPath))
+                {
+                    Directory.CreateDirectory(recordedAudioFolderPath);
+                }
+                else if (!SkinwalkerConfig.KeepFilesBetweenSessions.Value)
+                {
+                    Directory.Delete(recordedAudioFolderPath, true);
+                    Directory.CreateDirectory(recordedAudioFolderPath);
+                }
             }
 
-            Directory.CreateDirectory(audioFolderPath);
+            if (AreCustomSoundsEnabled)
+            {
+                if (!Directory.Exists(persistentAudioFolderPath))
+                {
+                    Directory.CreateDirectory(persistentAudioFolderPath);
+                }
+            }
         }
 
         private void EnableRecording()
@@ -125,11 +163,11 @@
 
         private void ScanWavFiles()
         {
-            //TODO :: Should probably go through every path instead of starting multiple Coroutines
-            string[] audioFilePaths = Directory.GetFiles(audioFolderPath);
-            foreach (string filePath in audioFilePaths)
+            string[] audioFilePaths = Directory.GetFiles(recordedAudioFolderPath);
+
+            if (audioFilePaths.Length > 0)
             {
-                StartCoroutine(CacheWavFile(filePath));
+                StartCoroutine(CacheWavFile(audioFilePaths, cachedRecordedAudio, true));
             }
         }
 
@@ -195,29 +233,41 @@
             }
         }
 
-        private IEnumerator CacheWavFile(string path)
+        private IEnumerator CacheWavFile(string[] paths, List<AudioClip> referencedList, bool deleteAfterCaching)
         {
-            UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(path, AudioType.WAV);
-            yield return request.SendWebRequest();
-
-            while (request.result == Result.InProgress)
+            foreach (string path in paths)
             {
-                yield return null;
+                UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(path, AudioType.WAV);
+                yield return request.SendWebRequest(); //TODO :: Do we need to yield for this?
+
+                while (request.result == Result.InProgress)
+                {
+                    yield return null;
+                }
+
+                if (request.result != Result.Success)
+                {
+                    SkinwalkerLogger.LogWarning($"Request failed for file at path: {path}\n Request Result: {request.result}");
+                    continue;
+                }
+
+                AudioClip audioClip = DownloadHandlerAudioClip.GetContent(request);
+                if (audioClip.length > 0.9f)
+                {
+                    referencedList.Add(audioClip);
+                }
+
+                if (deleteAfterCaching)
+                {
+                    File.Delete(path);
+                }
+                request.Dispose();
             }
 
-            if (request.result != Result.Success)
+            if (!isCleaningAudioCache && cachedRecordedAudio.Count > MAX_CACHED_AUDIO)
             {
-                yield break;
+                StartCoroutine(CleanAudioCache());
             }
-
-            AudioClip audioClip = DownloadHandlerAudioClip.GetContent(request);
-            if (audioClip.length > 0.9f)
-            {
-                cachedAudio.Add(audioClip);
-            }
-
-            File.Delete(path);
-            request.Dispose();
         }
 
         private void DisableRecording()
@@ -229,45 +279,65 @@
         public bool TryGetSample(out AudioClip audioClip)
         {
             audioClip = null;
+            List<AudioClip> chosenList;
+            bool removeOncePlayed;
 
-            if (cachedAudio.Count > 0)
+            if (IsVoiceRecordingEnabled && AreCustomSoundsEnabled)
             {
-                int index = Random.Range(0, cachedAudio.Count - 1);
-                audioClip = cachedAudio[index];
-                cachedAudio.RemoveAt(index);
-
-                if (!cleaningAudioCache && cachedAudio.Count > MAX_CACHED_AUDIO)
-                {
-                    StartCoroutine(CleanAudioCache());
-                }
-
-                if (audioClip == null)
-                {
-                    return false;
-                }
-
-                return true;
+                //TODO :: Rolling a float between 0 and 1 seemed to give strange odds. Using ints for now.
+                float random = UnityEngine.Random.Range(SkinwalkerConfig.CUSTOM_SOUND_FREQUENCY_MIN, SkinwalkerConfig.CUSTOM_SOUND_FREQUENCY_MAX + 1);
+                removeOncePlayed = random > SkinwalkerConfig.CustomSoundFrequency.Value;
+                chosenList = removeOncePlayed ? cachedRecordedAudio : cachedPersistentAudio;
+            }
+            else if (IsVoiceRecordingEnabled)
+            {
+                chosenList = cachedRecordedAudio;
+                removeOncePlayed = true;
+            }
+            else
+            {
+                chosenList = cachedPersistentAudio;
+                removeOncePlayed = false;
             }
 
-            return false;
+            if (chosenList.Count == 0)
+            {
+                return false;
+            }
+
+            int index = UnityEngine.Random.Range(0, chosenList.Count);
+            audioClip = chosenList[index];
+
+            if (removeOncePlayed)
+            {
+                chosenList.RemoveAt(index);
+            }
+
+            if (audioClip == null)
+            {
+                SkinwalkerLogger.LogWarning($"TryGetSample.audioClip was null");
+                return false;
+            }
+
+            return true;
         }
 
         private IEnumerator CleanAudioCache()
         {
-            cleaningAudioCache = true;
+            isCleaningAudioCache = true;
 
-            while (cachedAudio.Count > MAX_CACHED_AUDIO)
+            while (cachedRecordedAudio.Count > MAX_CACHED_AUDIO)
             {
-                cachedAudio.RemoveAt(UnityEngine.Random.Range(0, cachedAudio.Count));
+                cachedRecordedAudio.RemoveAt(UnityEngine.Random.Range(0, cachedRecordedAudio.Count));
                 yield return null;
             }
 
-            cleaningAudioCache = false;
+            isCleaningAudioCache = false;
         }
 
         public void ClearCache()
         {
-            cachedAudio.Clear();
+            cachedRecordedAudio.Clear();
         }
     }
 }
