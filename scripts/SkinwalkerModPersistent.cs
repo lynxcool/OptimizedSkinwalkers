@@ -13,14 +13,18 @@
         private const int MAX_CACHED_AUDIO = 200;
 
         private List<AudioClip> cachedRecordedAudio = new();
-        private List<AudioClip> cachedPersistentAudio = new();
+        private List<AudioClip> cachedCustomAudio = new();
         private RoundManager roundManager;
 
         private bool isCleaningAudioCache;
 
         private string recordedAudioFolderPath;
-        private string persistentAudioFolderPath;
+        private string customAudioFolderPath;
+        private bool recordedFolderCreated;
+        private bool customFolderCreated;
+
         private int skinwalkerCheckedCount;
+
         private float folderScanRate;
         private float nextTimeToCheckFolder;
 
@@ -47,7 +51,7 @@
             transform.position = Vector3.zero; //TODO :: Probably useless, but who knows
 
             recordedAudioFolderPath = Path.Combine(Application.dataPath, "..", "Dissonance_Diagnostics");
-            persistentAudioFolderPath = Path.Combine(Application.dataPath, "..", "Custom_Sounds");
+            customAudioFolderPath = Path.Combine(Application.dataPath, "..", "Custom_Sounds");
             InitializeAudioFolders();
 
             folderScanRate = Mathf.Max(SkinwalkerConfig.DEFAULT_FOLDER_SCAN_INTERVAL, SkinwalkerConfig.TimeForFileCaching.Value);
@@ -58,27 +62,18 @@
             }
         }
 
-        private IEnumerator Start()
-        {
-            if (AreCustomSoundsEnabled)
-            {
-                string[] audioFilePaths = Directory.GetFiles(persistentAudioFolderPath);
-                yield return StartCoroutine(CacheWavFile(audioFilePaths, cachedPersistentAudio, false));
-            }
-        }
-
         private void Update()
         {
-            if ((IsVoiceRecordingEnabled && !Directory.Exists(recordedAudioFolderPath)) ||
-                AreCustomSoundsEnabled && !Directory.Exists(persistentAudioFolderPath))
+            if ((IsVoiceRecordingEnabled && !recordedFolderCreated) ||
+                AreCustomSoundsEnabled && !customFolderCreated)
             {
                 return;
             }
 
-            if (Time.realtimeSinceStartup > nextTimeToCheckFolder)
+            if (IsVoiceRecordingEnabled && Time.realtimeSinceStartup > nextTimeToCheckFolder)
             {
                 nextTimeToCheckFolder = Time.realtimeSinceStartup + folderScanRate;
-                ScanWavFiles();
+                ScanThenCacheWavFiles(recordedAudioFolderPath, cachedRecordedAudio, true);
             }
 
             HandleRoundManagerState();
@@ -148,9 +143,38 @@
 
             if (AreCustomSoundsEnabled)
             {
-                if (!Directory.Exists(persistentAudioFolderPath))
+                if (!Directory.Exists(customAudioFolderPath))
                 {
-                    Directory.CreateDirectory(persistentAudioFolderPath);
+                    Directory.CreateDirectory(customAudioFolderPath);
+                }
+            }
+
+            StartCoroutine(CheckForFolderCreation());
+        }
+
+        private IEnumerator CheckForFolderCreation()
+        {
+            while (IsVoiceRecordingEnabled && !recordedFolderCreated)
+            {
+                recordedFolderCreated = Directory.Exists(recordedAudioFolderPath);
+
+                if (!recordedFolderCreated)
+                {
+                    yield return new WaitForSecondsRealtime(1f);
+                }
+            }
+
+            while (AreCustomSoundsEnabled && !customFolderCreated)
+            {
+                customFolderCreated = Directory.Exists(customAudioFolderPath);
+
+                if (customFolderCreated)
+                {
+                    ScanThenCacheWavFiles(customAudioFolderPath, cachedCustomAudio, false);
+                }
+                else
+                {
+                    yield return new WaitForSecondsRealtime(1f);
                 }
             }
         }
@@ -161,13 +185,13 @@
             DebugSettings.Instance.RecordFinalAudio = true;
         }
 
-        private void ScanWavFiles()
+        private void ScanThenCacheWavFiles(string path, List<AudioClip> cacheList, bool deleteAfterCaching)
         {
-            string[] audioFilePaths = Directory.GetFiles(recordedAudioFolderPath);
+            string[] audioFilePaths = Directory.GetFiles(path);
 
             if (audioFilePaths.Length > 0)
             {
-                StartCoroutine(CacheWavFile(audioFilePaths, cachedRecordedAudio, true));
+                StartCoroutine(CacheWavFile(audioFilePaths, cacheList, deleteAfterCaching));
             }
         }
 
@@ -252,7 +276,7 @@
                 }
 
                 AudioClip audioClip = DownloadHandlerAudioClip.GetContent(request);
-                if (audioClip.length > 0.9f)
+                if (!deleteAfterCaching || audioClip.length > 0.9f)
                 {
                     referencedList.Add(audioClip);
                 }
@@ -287,7 +311,7 @@
                 //TODO :: Rolling a float between 0 and 1 seemed to give strange odds. Using ints for now.
                 float random = UnityEngine.Random.Range(SkinwalkerConfig.CUSTOM_SOUND_FREQUENCY_MIN, SkinwalkerConfig.CUSTOM_SOUND_FREQUENCY_MAX + 1);
                 removeOncePlayed = random > SkinwalkerConfig.CustomSoundFrequency.Value;
-                chosenList = removeOncePlayed ? cachedRecordedAudio : cachedPersistentAudio;
+                chosenList = removeOncePlayed ? cachedRecordedAudio : cachedCustomAudio;
             }
             else if (IsVoiceRecordingEnabled)
             {
@@ -296,7 +320,7 @@
             }
             else
             {
-                chosenList = cachedPersistentAudio;
+                chosenList = cachedCustomAudio;
                 removeOncePlayed = false;
             }
 
