@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>lynxdev.OptimizedSkinwalkers</AssemblyName>
     <Description>Attempt to optimize Skinwalkers</Description>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
@@ -22,13 +22,13 @@
   
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>assemblies\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="DissonanceVoip">
-      <HintPath>assemblies\DissonanceVoip.dll</HintPath>
+      <HintPath>..\..\..\..\Lethal Company\Lethal Company_Data\Managed\DissonanceVoip.dll</HintPath>
     </Reference>
     <Reference Include="Unity.Netcode.Runtime">
-      <HintPath>assemblies\Unity.Netcode.Runtime.dll</HintPath>
+      <HintPath>..\..\..\..\Lethal Company\Lethal Company_Data\Managed\Unity.Netcode.Runtime.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

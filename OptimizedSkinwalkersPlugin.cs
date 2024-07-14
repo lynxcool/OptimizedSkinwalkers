@@ -4,6 +4,7 @@
     using Dissonance;
     using HarmonyLib;
     using System;
+    using System.Collections.Generic;
     using System.Reflection;
     using Unity.Netcode;
     using UnityEngine;
@@ -35,6 +36,7 @@
 
             SkinwalkerLogger.Initialize(PluginInfo.PLUGIN_GUID);
             SkinwalkerLogger.Log($"SKINWALKER MOD STARTING UP {PluginInfo.PLUGIN_VERSION}");
+
             SkinwalkerConfig.InitConfig(Config);
 
             if (SkinwalkerConfig.VoiceLineFrequency.Value == 0f)
@@ -44,22 +46,10 @@
             }
 
             InitializeNetworkVariableSerializationTypes();
+            CreateSkinwalkerModPersistent();
+            SetDissonanceLogLevel();
+
             SceneManager.sceneLoaded += SkinwalkerNetworkManagerHandler.ClientConnectInitializer;
-
-            GameObject modPersistent = new("Skinwalker Mod");
-            modPersistent.AddComponent<SkinwalkerModPersistent>();
-            modPersistent.hideFlags = (HideFlags)61;
-            DontDestroyOnLoad(modPersistent);
-
-            foreach (LogCategory category in Enum.GetValues(typeof(LogCategory)))
-            {
-                if (category == LogCategory.Core)
-                {
-                    continue;
-                }
-
-                Logs.SetLogLevel(category, Dissonance.LogLevel.Error);
-            }
         }
 
         private void InvokeAssemblyMethods()
@@ -85,6 +75,27 @@
             NetworkVariableSerializationTypes.InitializeEqualityChecker_UnmanagedIEquatable<bool>();
             NetworkVariableSerializationTypes.InitializeSerializer_UnmanagedByMemcpy<float>();
             NetworkVariableSerializationTypes.InitializeEqualityChecker_UnmanagedIEquatable<float>();
+        }
+
+        private void SetDissonanceLogLevel()
+        {
+            foreach (LogCategory category in Enum.GetValues(typeof(LogCategory)))
+            {
+                if (category == LogCategory.Core)
+                {
+                    continue;
+                }
+
+                Logs.SetLogLevel(category, Dissonance.LogLevel.Error);
+            }
+        }
+
+        private void CreateSkinwalkerModPersistent()
+        {
+            GameObject modPersistent = new("Skinwalker Mod");
+            modPersistent.AddComponent<SkinwalkerModPersistent>();
+            modPersistent.hideFlags = (HideFlags)61;
+            DontDestroyOnLoad(modPersistent);
         }
     }
 }
