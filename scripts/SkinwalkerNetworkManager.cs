@@ -6,8 +6,15 @@
 
     public class SkinwalkerNetworkManager : NetworkBehaviour
     {
-        public Dictionary<VoiceEnabled, NetworkVariable<bool>> NetworkVariables = new();
+        public Dictionary<Type, NetworkVariable<bool>> NetworkVariablesDict = new();
+        public NetworkVariable<bool> InsideModdedEnemy;
+        public NetworkVariable<bool> OutsideModdedEnemy;
+        public NetworkVariable<bool> DayTimeModdedEnemy;
+        public NetworkVariable<bool> NightTimeModdedEnemy;
         public NetworkVariable<float> VoiceLineFrequency;
+
+        private readonly NetworkVariableReadPermission readPermission = NetworkVariableReadPermission.Everyone;
+        private readonly NetworkVariableWritePermission writePermission = NetworkVariableWritePermission.Server;
 
         public static SkinwalkerNetworkManager Instance { get; private set; }
 
@@ -25,7 +32,11 @@
 
             SkinwalkerLogger.Log("SkinwalkerNetworkManager Awake Called");
 
-            VoiceLineFrequency = new NetworkVariable<float>(1f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+            InsideModdedEnemy = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_INSIDE_ENEMIES, readPermission, writePermission);
+            OutsideModdedEnemy = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_OUTSIDE_ENEMIES, readPermission, writePermission);
+            DayTimeModdedEnemy = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_DAY_TIME_ENEMIES, readPermission, writePermission);
+            NightTimeModdedEnemy = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_NIGHT_TIME_ENEMIES, readPermission, writePermission);
+            VoiceLineFrequency = new NetworkVariable<float>(SkinwalkerConfig.DEFAULT_VOICE_FREQUENCY, readPermission, writePermission);
             BuildNetworkVariableDict();
         }
 
@@ -52,29 +63,9 @@
         {
             SkinwalkerLogger.Log("called __initializeVariables");
 
-            if (VoiceLineFrequency == null)
+            if (!TryInitializeNetworkVariables() || !TryInitializeEnemyNetworkVariables())
             {
-                SkinwalkerLogger.LogError("SkinwalkerNetworkManager.VoiceLineFrequency cannot be null. All NetworkVariableBase instances must be initialized.");
-                return;
-            }
-
-            VoiceLineFrequency.Initialize(this);
-            __nameNetworkVariable(VoiceLineFrequency, $"VoiceEnabled_VoiceLineFrequency");
-            NetworkVariableFields.Add(VoiceLineFrequency);
-
-            for (int i = 0; i < NetworkVariables.Count; i++)
-            {
-                VoiceEnabled voiceValue = (VoiceEnabled)i;
-
-                if (NetworkVariables[voiceValue] == null)
-                {
-                    SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.NetworkVariables.Key:{voiceValue} cannot be null. All NetworkVariableBase instances must be initialized.");
-                    return;
-                }
-
-                NetworkVariables[voiceValue].Initialize(this);
-                __nameNetworkVariable(NetworkVariables[voiceValue], $"VoiceEnabled_{voiceValue.ToString()}");
-                NetworkVariableFields.Add(NetworkVariables[voiceValue]);
+                SkinwalkerLogger.LogError("NetworkManager Initialization failed");
             }
         }
 
@@ -85,13 +76,84 @@
 
         private void BuildNetworkVariableDict()
         {
-            for (int i = 0; i < Enum.GetValues(typeof(VoiceEnabled)).Length; i++)
+            foreach (EnemyConfigEntry configEntry in SkinwalkerConfig.ConfigEntries.Values)
             {
-                VoiceEnabled voiceValue = (VoiceEnabled)i;
-
                 NetworkVariable<bool> networkVariable = new(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-                NetworkVariables.Add(voiceValue, networkVariable);
+                NetworkVariablesDict.Add(configEntry.EnemyType, networkVariable);
             }
+        }
+
+        private bool TryInitializeNetworkVariables()
+        {
+            if (VoiceLineFrequency == null)
+            {
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.VoiceLineFrequency cannot be null. All NetworkVariableBase instances must be initialized.");
+            }
+
+            if (InsideModdedEnemy == null)
+            {
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.InsideModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+            }
+
+            if (OutsideModdedEnemy == null)
+            {
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.OutsideModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+            }
+
+            if (DayTimeModdedEnemy == null)
+            {
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.DayTimeModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+            }
+
+            if (NightTimeModdedEnemy == null)
+            {
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.NightTimeModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+            }
+
+            if (VoiceLineFrequency == null || InsideModdedEnemy == null || OutsideModdedEnemy == null || DayTimeModdedEnemy == null || NightTimeModdedEnemy == null)
+            {
+                return false;
+            }
+
+            VoiceLineFrequency.Initialize(this);
+            __nameNetworkVariable(VoiceLineFrequency, $"VoiceLineFrequency");
+            NetworkVariableFields.Add(VoiceLineFrequency);
+
+            InsideModdedEnemy.Initialize(this);
+            __nameNetworkVariable(InsideModdedEnemy, $"VoiceEnabled_InsideModdedEnemy");
+            NetworkVariableFields.Add(InsideModdedEnemy);
+
+            OutsideModdedEnemy.Initialize(this);
+            __nameNetworkVariable(OutsideModdedEnemy, $"VoiceEnabled_OutsideModdedEnemy");
+            NetworkVariableFields.Add(OutsideModdedEnemy);
+
+            DayTimeModdedEnemy.Initialize(this);
+            __nameNetworkVariable(DayTimeModdedEnemy, $"VoiceEnabled_DayTimeModdedEnemy");
+            NetworkVariableFields.Add(DayTimeModdedEnemy);
+
+            NightTimeModdedEnemy.Initialize(this);
+            __nameNetworkVariable(NightTimeModdedEnemy, $"VoiceEnabled_NightTimeModdedEnemy");
+            NetworkVariableFields.Add(NightTimeModdedEnemy);
+
+            return true;
+        }
+
+        private bool TryInitializeEnemyNetworkVariables()
+        {
+            foreach (EnemyConfigEntry configEntry in SkinwalkerConfig.ConfigEntries.Values)
+            {
+                if (NetworkVariablesDict[configEntry.EnemyType] == null)
+                {
+                    SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.NetworkVariables.Key:{configEntry.EnemyType.Name} cannot be null. All NetworkVariableBase instances must be initialized.");
+                    return false;
+                }
+
+                NetworkVariablesDict[configEntry.EnemyType].Initialize(this);
+                __nameNetworkVariable(NetworkVariablesDict[configEntry.EnemyType], $"VoiceEnabled_{configEntry.cleanedName}");
+                NetworkVariableFields.Add(NetworkVariablesDict[configEntry.EnemyType]);
+            }
+
+            return true;
         }
 
         private void SetupConfig()
@@ -103,18 +165,20 @@
                 SkinwalkerLogger.Log("HOST SENDING CONFIG TO CLIENTS...");
 
                 VoiceLineFrequency.Value = SkinwalkerConfig.VoiceLineFrequency.Value;
+                InsideModdedEnemy.Value = SkinwalkerConfig.InsideModdedEnemies.Value;
+                OutsideModdedEnemy.Value = SkinwalkerConfig.OutsideModdedEnemies.Value;
+                DayTimeModdedEnemy.Value = SkinwalkerConfig.DayTimeModdedEnemies.Value;
+                NightTimeModdedEnemy.Value = SkinwalkerConfig.NightTimeModdedEnemies.Value;
 
-                for (int i = 0; i < NetworkVariables.Count; i++)
+                foreach (EnemyConfigEntry configEntry in SkinwalkerConfig.ConfigEntries.Values)
                 {
-                    VoiceEnabled voiceValue = (VoiceEnabled)i;
-
-                    if (NetworkVariables[voiceValue] == null)
+                    if (NetworkVariablesDict[configEntry.EnemyType] == null)
                     {
-                        SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.NetworkVariables.Key:{voiceValue} was null");
+                        SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.NetworkVariables.Key:{configEntry.EnemyType.Name} was null");
                         return;
                     }
 
-                    NetworkVariables[voiceValue].Value = SkinwalkerConfig.ConfigEntries[voiceValue].Value;
+                    NetworkVariablesDict[configEntry.EnemyType].Value = SkinwalkerConfig.ConfigEntries[configEntry.EnemyType].configEntry.Value;
                 }
 
                 SkinwalkerLogger.Log("CONFIG SENT...");

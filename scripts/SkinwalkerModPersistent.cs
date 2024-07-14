@@ -1,9 +1,11 @@
 ﻿namespace OptimizedSkinwalkers
 {
     using Dissonance.Config;
+    using System;
     using System.Collections;
     using System.Collections.Generic;
     using System.IO;
+    using Unity.Netcode;
     using UnityEngine;
     using UnityEngine.Networking;
     using static UnityEngine.Networking.UnityWebRequest;
@@ -203,57 +205,33 @@
                 return false;
             }
 
-            switch (enemy)
+            if (SkinwalkerNetworkManager.Instance.NetworkVariablesDict.TryGetValue(enemy.GetType(), out NetworkVariable<bool> networkVariable))
             {
-                case MaskedPlayerEnemy:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Masked].Value;
-                case NutcrackerEnemyAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Nutcracker].Value;
-                case BaboonBirdAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.BaboonHawk].Value;
-                case FlowermanAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Bracken].Value;
-                case SandSpiderAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.BunkerSpider].Value;
-                case CentipedeAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Centipede].Value;
-                case SpringManAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.CoilHead].Value;
-                case MouthDogAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.EyelessDog].Value;
-                case ForestGiantAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.ForestGiant].Value;
-                case DressGirlAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.GhostGirl].Value;
-                case SandWormAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.GiantWorm].Value;
-                case HoarderBugAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.HoardingBug].Value;
-                case BlobAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Hygrodere].Value;
-                case JesterAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Jester].Value;
-                case PufferAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.SporeLizard].Value;
-                case CrawlerAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Thumper].Value;
-                case ButlerEnemyAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.Butler].Value;
-                case ButlerBeesEnemyAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.ButlerBees].Value;
-                case RadMechAI:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.OldBird].Value;
-                case FlowerSnakeEnemy:
-                    return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.FlowerSnake].Value;
-                default:
-                    if (enemy.enemyType.isOutsideEnemy)
-                    {
-                        return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.OtherOutsideEnemies].Value;
-                    }
-                    else
-                    {
-                        return SkinwalkerNetworkManager.Instance.NetworkVariables[VoiceEnabled.OtherInsideEnemies].Value;
-                    }
+                return networkVariable.Value;
+            }
+            else
+            {
+                if (enemy.enemyType.isOutsideEnemy && !SkinwalkerNetworkManager.Instance.OutsideModdedEnemy.Value)
+                {
+                    return false;
+                }
+                
+                if (!enemy.enemyType.isOutsideEnemy && !SkinwalkerNetworkManager.Instance.InsideModdedEnemy.Value)
+                {
+                    return false;
+                }
+
+                if (enemy.enemyType.isDaytimeEnemy && !SkinwalkerNetworkManager.Instance.DayTimeModdedEnemy.Value)
+                {
+                    return false;
+                }
+
+                if (!enemy.enemyType.isDaytimeEnemy && !SkinwalkerNetworkManager.Instance.NightTimeModdedEnemy.Value)
+                {
+                    return false;
+                }
+
+                return true;
             }
         }
 

@@ -3,37 +3,74 @@ namespace OptimizedSkinwalkers
     using BepInEx.Configuration;
     using System;
     using System.Collections.Generic;
+    using System.Reflection;
+    using System.Text;
 
     public static class SkinwalkerConfig
     {
         public const float DEFAULT_FOLDER_SCAN_INTERVAL = 8f;
         public const int CUSTOM_SOUND_FREQUENCY_MIN = 0;
         public const int CUSTOM_SOUND_FREQUENCY_MAX = 100;
+        public const float DEFAULT_VOICE_FREQUENCY = 1f;
+        public const bool DEFAULT_INSIDE_ENEMIES = true;
+        public const bool DEFAULT_OUTSIDE_ENEMIES = true;
+        public const bool DEFAULT_DAY_TIME_ENEMIES = false;
+        public const bool DEFAULT_NIGHT_TIME_ENEMIES = true;
 
-        private const float DEFAULT_FREQUENCY = 1f;
         private const string EXTRA_SETTINGS = "Extra Settings";
+        private const string MONSTER_VOICES = "Monster Voices";
 
         public static ConfigEntry<float> VoiceLineFrequency;
         public static ConfigEntry<bool> KeepFilesBetweenSessions;
         public static ConfigEntry<float> TimeForFileCaching;
         public static ConfigEntry<bool> AddCustomFiles;
         public static ConfigEntry<float> CustomSoundFrequency;
-        public static Dictionary<VoiceEnabled, ConfigEntry<bool>> ConfigEntries = new();
+
+        public static Dictionary<Type, EnemyConfigEntry> ConfigEntries = new();
+        public static ConfigEntry<bool> InsideModdedEnemies;
+        public static ConfigEntry<bool> OutsideModdedEnemies;
+        public static ConfigEntry<bool> DayTimeModdedEnemies;
+        public static ConfigEntry<bool> NightTimeModdedEnemies;
 
         public static void InitConfig(ConfigFile configFile)
         {
-            //TODO :: Shouldn't hard code these values
+            BuildEnemyEntries(GetAllEnemyTypes());
+
+            GenerateVoiceLineConfig(configFile);
+            GenerateMonsterVoicesConfig(configFile);
+            GenerateModdedMonsterConfig(configFile);
+            GenerateExtraConfig(configFile);
+        }
+
+        private static void GenerateVoiceLineConfig(ConfigFile configFile)
+        {
             VoiceLineFrequency = configFile.Bind("Voice Settings",
-                                                "VoiceLineFrequency",
-                                                DEFAULT_FREQUENCY,
-                                                $"{DEFAULT_FREQUENCY} is the default, and voice lines will occur every {SkinwalkerBehaviour.PLAY_INTERVAL_MIN} to {SkinwalkerBehaviour.PLAY_INTERVAL_MAX} seconds per enemy." +
+                                                "Voice Line Frequency",
+                                                DEFAULT_VOICE_FREQUENCY,
+                                                $"{DEFAULT_VOICE_FREQUENCY} is the default, and voice lines will occur every {SkinwalkerBehaviour.PLAY_INTERVAL_MIN} to {SkinwalkerBehaviour.PLAY_INTERVAL_MAX} seconds per enemy." +
                                                 $"\nSetting this to 2 means they will occur twice as often, 0.5 means half as often, etc." +
                                                 $"\nSetting this to 0 disables the mod.");
             SkinwalkerLogger.Log($"VoiceLineFrequency; VALUE LOADED FROM CONFIG: {VoiceLineFrequency.Value}");
+        }
 
-            GenerateMonsterVoicesConfig(configFile);
+        private static void GenerateMonsterVoicesConfig(ConfigFile configFile)
+        {
+            foreach (EnemyConfigEntry enemyEntry in ConfigEntries.Values)
+            {
+                enemyEntry.SetConfigEntry(configFile, MONSTER_VOICES);
+            }
+        }
 
-            //TODO :: Add logs for these
+        private static void GenerateModdedMonsterConfig(ConfigFile configFile)
+        {
+            InsideModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Inside)", DEFAULT_INSIDE_ENEMIES);
+            OutsideModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Outside)", DEFAULT_OUTSIDE_ENEMIES);
+            DayTimeModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Day Time)", DEFAULT_DAY_TIME_ENEMIES);
+            NightTimeModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Night Time)", DEFAULT_NIGHT_TIME_ENEMIES);
+        }
+
+        private static void GenerateExtraConfig(ConfigFile configFile)
+        {
             KeepFilesBetweenSessions = configFile.Bind(EXTRA_SETTINGS,
                                                         "Keep Files Between Sessions",
                                                         false,
@@ -65,33 +102,38 @@ namespace OptimizedSkinwalkers
             SkinwalkerLogger.Log($"CustomSoundFrequency; VALUE LOADED FROM CONFIG: {CustomSoundFrequency.Value}");
         }
 
-        private static void GenerateMonsterVoicesConfig(ConfigFile configFile)
+        private static void BuildEnemyEntries(List<Type> enemyTypes)
         {
-            foreach (VoiceEnabled voiceName in Enum.GetValues(typeof(VoiceEnabled)))
+            foreach (Type enemyType in enemyTypes)
             {
-                bool defaultValue;
-                string description = "";
-
-                switch (voiceName)
-                {
-                    case VoiceEnabled.OtherOutsideEnemies:
-                        defaultValue = false;
-                        description = "Every OUTSIDE enemies that aren't in the list above.";
-                        break;
-                    case VoiceEnabled.OtherInsideEnemies:
-                        defaultValue = true;
-                        description = "Every INSIDE enemies that aren't in the list above.";
-                        break;
-                    default:
-                        defaultValue = true;
-                        break;
-                }
-
-                ConfigEntry<bool> entry = configFile.Bind("Monster Voices", voiceName.ToString(), defaultValue, description);
-                ConfigEntries.Add(voiceName, entry);
-
-                SkinwalkerLogger.Log($"VoiceEnabled_{voiceName}; VALUE LOADED FROM CONFIG: {ConfigEntries[voiceName].Value}");
+                ConfigEntries.Add(enemyType, new EnemyConfigEntry(enemyType));
             }
+        }
+
+        private static List<Type> GetAllEnemyTypes()
+        {
+            List<Type> enemyDerivatives = new();
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            foreach (Assembly assembly in assemblies)
+            {
+                Type[] types = assembly.GetTypes();
+
+                foreach (Type type in types)
+                {
+                    if (typeof(EnemyAI).IsAssignableFrom(type))
+                    {
+                        if (type == typeof(TestEnemy) || type == typeof(EnemyAI))
+                        {
+                            continue;
+                        }
+
+                        enemyDerivatives.Add(type);
+                    }
+                }
+            }
+
+            return enemyDerivatives;
         }
     }
 }
