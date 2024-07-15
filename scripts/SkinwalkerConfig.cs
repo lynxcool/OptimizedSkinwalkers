@@ -26,7 +26,7 @@ namespace OptimizedSkinwalkers
         public static ConfigEntry<bool> AddCustomFiles;
         public static ConfigEntry<float> CustomSoundFrequency;
 
-        public static Dictionary<Type, EnemyConfigEntry> ConfigEntries = new();
+        public static Dictionary<Type, EnemyConfigEntry> EnemyEntries = new();
         public static ConfigEntry<bool> InsideModdedEnemies;
         public static ConfigEntry<bool> OutsideModdedEnemies;
         public static ConfigEntry<bool> DayTimeModdedEnemies;
@@ -55,7 +55,7 @@ namespace OptimizedSkinwalkers
 
         private static void GenerateMonsterVoicesConfig(ConfigFile configFile)
         {
-            foreach (EnemyConfigEntry enemyEntry in ConfigEntries.Values)
+            foreach (EnemyConfigEntry enemyEntry in EnemyEntries.Values)
             {
                 enemyEntry.SetConfigEntry(configFile, MONSTER_VOICES);
             }
@@ -106,30 +106,38 @@ namespace OptimizedSkinwalkers
         {
             foreach (Type enemyType in enemyTypes)
             {
-                ConfigEntries.Add(enemyType, new EnemyConfigEntry(enemyType));
+                EnemyEntries.Add(enemyType, new EnemyConfigEntry(enemyType));
             }
         }
 
         private static List<Type> GetAllEnemyTypes()
         {
             List<Type> enemyDerivatives = new();
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            Assembly assembly;
 
-            foreach (Assembly assembly in assemblies)
+            try
             {
-                Type[] types = assembly.GetTypes();
+                assembly = Assembly.Load("Assembly-CSharp");
+            }
+            catch (Exception ex)
+            {
+                SkinwalkerLogger.LogError("Couldn't load Assembly-CSharp. Exception:");
+                SkinwalkerLogger.LogError(ex.Message);
+                return enemyDerivatives;
+            }
 
-                foreach (Type type in types)
+            Type[] types = assembly.GetTypes();
+
+            foreach (Type type in types)
+            {
+                if (typeof(EnemyAI).IsAssignableFrom(type))
                 {
-                    if (typeof(EnemyAI).IsAssignableFrom(type))
+                    if (type == typeof(TestEnemy) || type == typeof(EnemyAI))
                     {
-                        if (type == typeof(TestEnemy) || type == typeof(EnemyAI))
-                        {
-                            continue;
-                        }
-
-                        enemyDerivatives.Add(type);
+                        continue;
                     }
+
+                    enemyDerivatives.Add(type);
                 }
             }
 

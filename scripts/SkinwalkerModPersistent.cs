@@ -211,22 +211,22 @@
             }
             else
             {
-                if (enemy.enemyType.isOutsideEnemy && !SkinwalkerNetworkManager.Instance.OutsideModdedEnemy.Value)
+                if (enemy.enemyType.isOutsideEnemy && !SkinwalkerNetworkManager.Instance.OutsideModdedEnemies.Value)
                 {
                     return false;
                 }
                 
-                if (!enemy.enemyType.isOutsideEnemy && !SkinwalkerNetworkManager.Instance.InsideModdedEnemy.Value)
+                if (!enemy.enemyType.isOutsideEnemy && !SkinwalkerNetworkManager.Instance.InsideModdedEnemies.Value)
                 {
                     return false;
                 }
 
-                if (enemy.enemyType.isDaytimeEnemy && !SkinwalkerNetworkManager.Instance.DayTimeModdedEnemy.Value)
+                if (enemy.enemyType.isDaytimeEnemy && !SkinwalkerNetworkManager.Instance.DayTimeModdedEnemies.Value)
                 {
                     return false;
                 }
 
-                if (!enemy.enemyType.isDaytimeEnemy && !SkinwalkerNetworkManager.Instance.NightTimeModdedEnemy.Value)
+                if (!enemy.enemyType.isDaytimeEnemy && !SkinwalkerNetworkManager.Instance.NightTimeModdedEnemies.Value)
                 {
                     return false;
                 }

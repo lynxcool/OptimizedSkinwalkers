@@ -4,7 +4,7 @@
     using System;
     using System.Text;
 
-    public struct EnemyConfigEntry
+    public class EnemyConfigEntry
     {
         public Type EnemyType;
         public ConfigEntry<bool> configEntry;
@@ -24,7 +24,7 @@
             configEntry = configFile.Bind(sectionName, cleanedName, defaultValue, "");
         }
 
-        private readonly string GetNameForType(Type type)
+        private string GetNameForType(Type type)
         {
             StringBuilder stringBuilder = new StringBuilder(type.Name);
             stringBuilder.Replace("AI", "");
@@ -75,7 +75,7 @@
             };
         }
 
-        private readonly bool GetDefaultValue(Type type)
+        private bool GetDefaultValue(Type type)
         {
             switch (type.Name)
             {
