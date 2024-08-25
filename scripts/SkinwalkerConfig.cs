@@ -14,8 +14,9 @@ namespace OptimizedSkinwalkers
         public const float DEFAULT_VOICE_FREQUENCY = 1f;
         public const bool DEFAULT_INSIDE_ENEMIES = true;
         public const bool DEFAULT_OUTSIDE_ENEMIES = true;
-        public const bool DEFAULT_DAY_TIME_ENEMIES = false;
-        public const bool DEFAULT_NIGHT_TIME_ENEMIES = true;
+        public const bool DEFAULT_DAYTIME_ENEMIES = false;
+        public const bool DEFAULT_NIGHTTIME_ENEMIES = true;
+        public const bool DEFAULT_UNSPECIFIED_ENEMIES = true;
 
         private const string EXTRA_SETTINGS = "Extra Settings";
         private const string MONSTER_VOICES = "Monster Voices";
@@ -31,6 +32,7 @@ namespace OptimizedSkinwalkers
         public static ConfigEntry<bool> OutsideModdedEnemies;
         public static ConfigEntry<bool> DayTimeModdedEnemies;
         public static ConfigEntry<bool> NightTimeModdedEnemies;
+        public static ConfigEntry<bool> UnspecifiedModdedEnemies;
 
         public static void InitConfig(ConfigFile configFile)
         {
@@ -65,8 +67,9 @@ namespace OptimizedSkinwalkers
         {
             InsideModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Inside)", DEFAULT_INSIDE_ENEMIES);
             OutsideModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Outside)", DEFAULT_OUTSIDE_ENEMIES);
-            DayTimeModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Day Time)", DEFAULT_DAY_TIME_ENEMIES);
-            NightTimeModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Night Time)", DEFAULT_NIGHT_TIME_ENEMIES);
+            DayTimeModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Day Time)", DEFAULT_DAYTIME_ENEMIES);
+            NightTimeModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Night Time)", DEFAULT_NIGHTTIME_ENEMIES);
+            UnspecifiedModdedEnemies = configFile.Bind(MONSTER_VOICES, "Modded Enemies (Unspecified)", DEFAULT_UNSPECIFIED_ENEMIES);
         }
 
         private static void GenerateExtraConfig(ConfigFile configFile)

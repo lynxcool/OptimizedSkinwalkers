@@ -26,24 +26,6 @@
 
         private string GetNameForType(Type type)
         {
-            StringBuilder stringBuilder = new StringBuilder(type.Name);
-            stringBuilder.Replace("AI", "");
-            stringBuilder.Replace("Enemy", "");
-
-            string cleanedName = stringBuilder.ToString();
-
-            stringBuilder = new StringBuilder();
-            stringBuilder.Append(cleanedName[0]);
-
-            for (int i = 1; i < cleanedName.Length; i++)
-            {
-                if (char.IsUpper(cleanedName[i]))
-                {
-                    stringBuilder.Append(' ');
-                }
-                stringBuilder.Append(cleanedName[i]);
-            }
-
             return type.Name switch
             {
                 nameof(BaboonBirdAI) => "Baboon Hawk",
@@ -71,8 +53,31 @@
                 nameof(PufferAI) => "Spore Lizard",
                 nameof(CrawlerAI) => "Thumper",
                 nameof(FlowerSnakeEnemy) => "Tulip Snake",
-                _ => stringBuilder.ToString()
+                _ => GetFixedEnemyName(type.Name)
             };
+        }
+
+        private string GetFixedEnemyName(string name)
+        {
+            StringBuilder stringBuilder = new StringBuilder(name);
+            stringBuilder.Replace("AI", "");
+            stringBuilder.Replace("Enemy", "");
+
+            string cleanedName = stringBuilder.ToString();
+
+            stringBuilder = new StringBuilder();
+            stringBuilder.Append(cleanedName[0]);
+
+            for (int i = 1; i < cleanedName.Length; i++)
+            {
+                if (char.IsUpper(cleanedName[i]))
+                {
+                    stringBuilder.Append(' ');
+                }
+                stringBuilder.Append(cleanedName[i]);
+            }
+
+            return stringBuilder.ToString();
         }
 
         private bool GetDefaultValue(Type type)

@@ -36,8 +36,10 @@
         {
             if (StartOfRound.Instance == null ||
                 StartOfRound.Instance.localPlayerController == null ||
+                StartOfRound.Instance.spectateCamera == null ||
                 ai == null ||
-                ai.isEnemyDead)
+                ai.isEnemyDead ||
+                audioSource == null)
             {
                 return;
             }

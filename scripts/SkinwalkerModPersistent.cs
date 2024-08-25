@@ -209,7 +209,7 @@
             {
                 return networkVariable.Value;
             }
-            else
+            else if (enemy.enemyType != null)
             {
                 if (enemy.enemyType.isOutsideEnemy && !SkinwalkerNetworkManager.Instance.OutsideModdedEnemies.Value)
                 {
@@ -232,6 +232,10 @@
                 }
 
                 return true;
+            }
+            else
+            {
+                return SkinwalkerNetworkManager.Instance.UnspecifiedModdedEnemies.Value;
             }
         }
 

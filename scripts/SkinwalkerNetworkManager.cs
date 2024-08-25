@@ -11,6 +11,7 @@
         public NetworkVariable<bool> OutsideModdedEnemies;
         public NetworkVariable<bool> DayTimeModdedEnemies;
         public NetworkVariable<bool> NightTimeModdedEnemies;
+        public NetworkVariable<bool> UnspecifiedModdedEnemies;
         public NetworkVariable<float> VoiceLineFrequency;
 
         private readonly NetworkVariableReadPermission readPermission = NetworkVariableReadPermission.Everyone;
@@ -34,8 +35,9 @@
 
             InsideModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_INSIDE_ENEMIES, readPermission, writePermission);
             OutsideModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_OUTSIDE_ENEMIES, readPermission, writePermission);
-            DayTimeModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_DAY_TIME_ENEMIES, readPermission, writePermission);
-            NightTimeModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_NIGHT_TIME_ENEMIES, readPermission, writePermission);
+            DayTimeModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_DAYTIME_ENEMIES, readPermission, writePermission);
+            NightTimeModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_NIGHTTIME_ENEMIES, readPermission, writePermission);
+            UnspecifiedModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_UNSPECIFIED_ENEMIES, readPermission, writePermission);
             VoiceLineFrequency = new NetworkVariable<float>(SkinwalkerConfig.DEFAULT_VOICE_FREQUENCY, readPermission, writePermission);
             BuildNetworkVariableDict();
         }
@@ -87,53 +89,67 @@
         {
             if (VoiceLineFrequency == null)
             {
-                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.VoiceLineFrequency cannot be null. All NetworkVariableBase instances must be initialized.");
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.{nameof(VoiceLineFrequency)} cannot be null. All NetworkVariableBase instances must be initialized.");
             }
 
             if (InsideModdedEnemies == null)
             {
-                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.InsideModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.{nameof(InsideModdedEnemies)} cannot be null. All NetworkVariableBase instances must be initialized.");
             }
 
             if (OutsideModdedEnemies == null)
             {
-                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.OutsideModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.{nameof(OutsideModdedEnemies)} cannot be null. All NetworkVariableBase instances must be initialized.");
             }
 
             if (DayTimeModdedEnemies == null)
             {
-                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.DayTimeModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.{nameof(DayTimeModdedEnemies)} cannot be null. All NetworkVariableBase instances must be initialized.");
             }
 
             if (NightTimeModdedEnemies == null)
             {
-                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.NightTimeModdedEnemy cannot be null. All NetworkVariableBase instances must be initialized.");
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.{nameof(NightTimeModdedEnemies)} cannot be null. All NetworkVariableBase instances must be initialized.");
             }
 
-            if (VoiceLineFrequency == null || InsideModdedEnemies == null || OutsideModdedEnemies == null || DayTimeModdedEnemies == null || NightTimeModdedEnemies == null)
+            if (UnspecifiedModdedEnemies == null)
+            {
+                SkinwalkerLogger.LogError($"SkinwalkerNetworkManager.{nameof(UnspecifiedModdedEnemies)} cannot be null. All NetworkVariableBase instances must be initialized.");
+            }
+
+            if (VoiceLineFrequency == null ||
+                InsideModdedEnemies == null ||
+                OutsideModdedEnemies == null ||
+                DayTimeModdedEnemies == null ||
+                NightTimeModdedEnemies == null ||
+                UnspecifiedModdedEnemies == null)
             {
                 return false;
             }
 
             VoiceLineFrequency.Initialize(this);
-            __nameNetworkVariable(VoiceLineFrequency, $"VoiceLineFrequency");
+            __nameNetworkVariable(VoiceLineFrequency, nameof(VoiceLineFrequency));
             NetworkVariableFields.Add(VoiceLineFrequency);
 
             InsideModdedEnemies.Initialize(this);
-            __nameNetworkVariable(InsideModdedEnemies, $"VoiceEnabled_InsideModdedEnemy");
+            __nameNetworkVariable(InsideModdedEnemies, $"VoiceEnabled_{nameof(InsideModdedEnemies)}");
             NetworkVariableFields.Add(InsideModdedEnemies);
 
             OutsideModdedEnemies.Initialize(this);
-            __nameNetworkVariable(OutsideModdedEnemies, $"VoiceEnabled_OutsideModdedEnemy");
+            __nameNetworkVariable(OutsideModdedEnemies, $"VoiceEnabled_{nameof(OutsideModdedEnemies)}");
             NetworkVariableFields.Add(OutsideModdedEnemies);
 
             DayTimeModdedEnemies.Initialize(this);
-            __nameNetworkVariable(DayTimeModdedEnemies, $"VoiceEnabled_DayTimeModdedEnemy");
+            __nameNetworkVariable(DayTimeModdedEnemies, $"VoiceEnabled_{nameof(DayTimeModdedEnemies)}");
             NetworkVariableFields.Add(DayTimeModdedEnemies);
 
             NightTimeModdedEnemies.Initialize(this);
-            __nameNetworkVariable(NightTimeModdedEnemies, $"VoiceEnabled_NightTimeModdedEnemy");
+            __nameNetworkVariable(NightTimeModdedEnemies, $"VoiceEnabled_{nameof(NightTimeModdedEnemies)}");
             NetworkVariableFields.Add(NightTimeModdedEnemies);
+
+            UnspecifiedModdedEnemies.Initialize(this);
+            __nameNetworkVariable(UnspecifiedModdedEnemies, $"VoiceEnabled_{nameof(UnspecifiedModdedEnemies)}");
+            NetworkVariableFields.Add(UnspecifiedModdedEnemies);
 
             return true;
         }
@@ -169,6 +185,7 @@
                 OutsideModdedEnemies.Value = SkinwalkerConfig.OutsideModdedEnemies.Value;
                 DayTimeModdedEnemies.Value = SkinwalkerConfig.DayTimeModdedEnemies.Value;
                 NightTimeModdedEnemies.Value = SkinwalkerConfig.NightTimeModdedEnemies.Value;
+                UnspecifiedModdedEnemies.Value = SkinwalkerConfig.UnspecifiedModdedEnemies.Value;
 
                 SkinwalkerLogger.Log($"Entering foreach");
                 foreach (EnemyConfigEntry enemyEntry in SkinwalkerConfig.EnemyEntries.Values)
