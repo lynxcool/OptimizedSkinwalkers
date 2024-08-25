@@ -21,17 +21,19 @@
 
         private void Awake()
         {
+            SkinwalkerLogger.Log("SkinwalkerNetworkManager Awake Called");
+
             if (Instance == null)
             {
+                SkinwalkerLogger.Log("SkinwalkerNetworkManager Instance set");
                 Instance = this;
             }
             else if (Instance != this) 
             {
+                SkinwalkerLogger.Log("SkinwalkerNetworkManager Destroying duplicate NetworkManager...");
                 Destroy(this);
                 return;
             }
-
-            SkinwalkerLogger.Log("SkinwalkerNetworkManager Awake Called");
 
             InsideModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_INSIDE_ENEMIES, readPermission, writePermission);
             OutsideModdedEnemies = new NetworkVariable<bool>(SkinwalkerConfig.DEFAULT_OUTSIDE_ENEMIES, readPermission, writePermission);
